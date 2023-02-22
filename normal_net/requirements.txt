@@ -1,0 +1,8 @@
+numpy==1.21.4
+torch==1.8.0
+torchvision==0.9.0
+requests
+matplotlib
+mediapipe==0.9.1.0
+opencv-python==4.5.5.64
+Pillow==9.4.0
