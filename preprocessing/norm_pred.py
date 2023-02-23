@@ -1,12 +1,9 @@
-import sys
-
 import cv2
 import numpy as np
 import torch
 
-sys.path.insert(0, './lib/')
-from preprocess import remove_bg, find_bbx, get_affine_transform
 from norm_net import define_G, load_pretrained_model
+from preprocess import remove_bg, find_bbx, get_affine_transform
 
 
 def load_network(pretrained_model_path='./pretrained_models/normal_net/netF.pth'):

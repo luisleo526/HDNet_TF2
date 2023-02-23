@@ -8,7 +8,7 @@ import imageio.v2 as imageio
 import numpy as np
 import torch
 from PIL import Image
-from .normal_net.lib.norm_pred import predNormals
+from norm_pred import predNormals
 
 sys.path.append("/detectron2/projects/DensePose")
 
