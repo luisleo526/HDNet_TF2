@@ -4,7 +4,7 @@ import skimage.data
 from PIL import Image, ImageDraw, ImageFont
 import math
 from tensorflow.python.platform import gfile
-import imageio
+import imageio.v2 as imageio
 import matplotlib.pyplot as plt
 import os.path
 import os

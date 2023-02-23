@@ -1,7 +1,5 @@
 import os
 import sys
-
-sys.path.append("/detectron2/projects/DensePose")
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -10,6 +8,9 @@ import imageio.v2 as imageio
 import numpy as np
 import torch
 from PIL import Image
+from .normal_net.lib.norm_pred import predNormals
+
+sys.path.append("/detectron2/projects/DensePose")
 
 
 def parse_args():
@@ -18,6 +19,13 @@ def parse_args():
     parser.add_argument('--output', type=str, default='data/celeba_self_supervisied')
     parser.add_argument('--img_size', type=int, default=256)
     return parser.parse_args()
+
+
+def write_matrix_txt(a, filename):
+    mat = np.matrix(a)
+    with open(filename, 'wb') as f:
+        for line in mat:
+            np.savetxt(f, line, fmt='%.5f')
 
 
 def padding_size(box_coordinates, img_shape, map_shape):
@@ -71,13 +79,18 @@ if __name__ == '__main__':
     Path(os.path.join(args.output, 'color_WO_bg')).mkdir(parents=True, exist_ok=True)
     Path(os.path.join(args.output, 'densepose')).mkdir(parents=True, exist_ok=True)
     Path(os.path.join(args.output, 'mask')).mkdir(parents=True, exist_ok=True)
+    Path(os.path.join(args.output, 'pred_normals')).mkdir(parents=True, exist_ok=True)
+    Path(os.path.join(args.output, 'pred_normals_png')).mkdir(parents=True, exist_ok=True)
 
+    netF = None
     for info in data:
 
         try:
             original_img = imageio.imread(info['file_name'])
             H, W, _ = original_img.shape
             original_img = np.array(original_img)
+
+            norm_output, mask, netF = predNormals(info['file_name'], ifRotate="0", netF=netF)
 
             u, v = (info['pred_densepose'][0].uv * 255).to(torch.uint8).cpu().numpy()
             i = (info['pred_densepose'][0].labels).to(torch.uint8).cpu().numpy()
@@ -90,13 +103,21 @@ if __name__ == '__main__':
             i = np.pad(i, pad_size, 'constant', constant_values=((0, 0), (0, 0)))
             single_mask = np.pad(single_mask, pad_size, 'constant', constant_values=((0, 0), (0, 0)))
 
-            densepose = np.transpose(np.stack((v, u, i)), (1, 2, 0))
-            mask = np.transpose(np.stack((single_mask, single_mask, single_mask)), (1, 2, 0))
+            densepose = np.stack((v, u, i), axis=-1)
 
             mask_image = np.copy(original_img)
             mask_image[mask == 0] = 255
 
             basename = os.path.basename(info["file_name"])
+
+            vis = np.copy((1 + norm_output) / 2)
+            vis[mask == 0] = 255
+
+            norm_output = resize_image(norm_output, args.img_size)
+
+            for idx in range(3):
+                write_matrix_txt(norm_output[:, :, 0],
+                                 os.path.join(args.output, 'pred_normals', basename + f"_{idx + 1}.txt"))
 
             Image.fromarray(resize_image(densepose, args.img_size), "RGB").save(
                 os.path.join(args.output, 'densepose', basename))
@@ -106,6 +127,9 @@ if __name__ == '__main__':
                 os.path.join(args.output, 'color_WO_bg', basename))
             Image.fromarray(resize_image(mask, args.img_size), "RGB").save(
                 os.path.join(args.output, 'mask', basename))
+            Image.fromarray(resize_image(vis, args.img_size), "RGB").save(
+                os.path.join(args.output, 'pred_normals_png', basename))
+
 
         except Exception as e:
 
