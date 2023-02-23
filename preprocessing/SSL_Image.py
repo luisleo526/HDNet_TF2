@@ -90,8 +90,6 @@ if __name__ == '__main__':
             H, W, _ = original_img.shape
             original_img = np.array(original_img)
 
-            norm_output, mask, netF = predNormals(info['file_name'], ifRotate="0", netF=netF)
-
             u, v = (info['pred_densepose'][0].uv * 255).to(torch.uint8).cpu().numpy()
             i = (info['pred_densepose'][0].labels).to(torch.uint8).cpu().numpy()
             single_mask = ((i != 0) * 255).astype(np.uint8)
@@ -104,31 +102,30 @@ if __name__ == '__main__':
             single_mask = np.pad(single_mask, pad_size, 'constant', constant_values=((0, 0), (0, 0)))
 
             densepose = np.stack((v, u, i), axis=-1)
-
-            mask_image = np.copy(original_img)
-            mask_image[mask == 0] = 255
-
             basename = os.path.basename(info["file_name"])
-
-            vis = np.copy((1 + norm_output) / 2)
-            vis[mask == 0] = 255
-
-            norm_output = resize_image(norm_output, args.img_size)
-
-            for idx in range(3):
-                write_matrix_txt(norm_output[:, :, 0],
-                                 os.path.join(args.output, 'pred_normals', basename + f"_{idx + 1}.txt"))
 
             Image.fromarray(resize_image(densepose, args.img_size), "RGB").save(
                 os.path.join(args.output, 'densepose', basename))
             Image.fromarray(resize_image(original_img, args.img_size), "RGB").save(
                 os.path.join(args.output, 'color', basename))
+
+            norm_output, mask, netF = predNormals(os.path.join(args.output, 'color', basename), ifRotate="0", netF=netF)
+            mask_image = imageio.imread(os.path.join(args.output, 'color', basename))
+            mask_image[mask == 0] = 255
+
+            vis = np.copy((1 + norm_output) / 2)
+            vis[mask == 0] = 255
+
+            for idx in range(3):
+                write_matrix_txt(norm_output[:, :, 0],
+                                 os.path.join(args.output, 'pred_normals', basename + f"_{idx + 1}.txt"))
+
+            Image.fromarray(resize_image(vis, args.img_size), "RGB").save(
+                os.path.join(args.output, 'pred_normals_png', basename))
             Image.fromarray(resize_image(mask_image, args.img_size), "RGB").save(
                 os.path.join(args.output, 'color_WO_bg', basename))
             Image.fromarray(resize_image(mask, args.img_size), "RGB").save(
                 os.path.join(args.output, 'mask', basename))
-            Image.fromarray(resize_image(vis, args.img_size), "RGB").save(
-                os.path.join(args.output, 'pred_normals_png', basename))
 
 
         except Exception as e:
