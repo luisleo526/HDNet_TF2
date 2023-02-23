@@ -8,9 +8,9 @@ import imageio.v2 as imageio
 import numpy as np
 import torch
 from PIL import Image
-from norm_pred import predNormals
+from preprocessing.normal_net.norm_pred import predNormals
 
-sys.path.append("/detectron2/projects/DensePose")
+sys.path.append("/DensePose")
 
 
 def parse_args():
@@ -99,7 +99,6 @@ if __name__ == '__main__':
             u = np.pad(u, pad_size, 'constant', constant_values=((0, 0), (0, 0)))
             v = np.pad(v, pad_size, 'constant', constant_values=((0, 0), (0, 0)))
             i = np.pad(i, pad_size, 'constant', constant_values=((0, 0), (0, 0)))
-            single_mask = np.pad(single_mask, pad_size, 'constant', constant_values=((0, 0), (0, 0)))
 
             densepose = np.stack((v, u, i), axis=-1)
             basename = os.path.basename(info["file_name"])
@@ -109,19 +108,19 @@ if __name__ == '__main__':
             Image.fromarray(resize_image(original_img, args.img_size), "RGB").save(
                 os.path.join(args.output, 'color', basename))
 
-            norm_output, mask, netF = predNormals(os.path.join(args.output, 'color', basename), ifRotate="0", netF=netF)
-            mask_image = imageio.imread(os.path.join(args.output, 'color', basename))
+            norm_output, mask, netF = predNormals(info['file_name'], ifRotate="0", netF=netF)
+            norm_output = resize_image(norm_output, args.img_size)
+            mask = resize_image(mask, args.img_size)
+            mask_image = resize_image(np.copy(original_img), args.img_size)
+
             mask_image[mask == 0] = 255
 
-            vis = np.copy((1 + norm_output) / 2)
+            vis = (np.copy((1 + norm_output) / 2) * 255).astype(np.uint8)
             vis[mask == 0] = 255
 
-            Image.fromarray(resize_image(vis, args.img_size), "RGB").save(
-                os.path.join(args.output, 'pred_normals_png', basename))
-            Image.fromarray(resize_image(mask_image, args.img_size), "RGB").save(
-                os.path.join(args.output, 'color_WO_bg', basename))
-            Image.fromarray(resize_image(mask, args.img_size), "RGB").save(
-                os.path.join(args.output, 'mask', basename))
+            Image.fromarray(vis, "RGB").save(os.path.join(args.output, 'pred_normals_png', basename))
+            Image.fromarray(mask_image, "RGB").save(os.path.join(args.output, 'color_WO_bg', basename))
+            Image.fromarray(mask, "RGB").save(os.path.join(args.output, 'mask', basename))
 
             basename = Path(info["file_name"]).stem
 
@@ -129,8 +128,6 @@ if __name__ == '__main__':
                 write_matrix_txt(norm_output[:, :, 0],
                                  os.path.join(args.output, 'pred_normals', basename + f"_{idx + 1}.txt"))
 
-
         except Exception as e:
-
             print(str(e))
             print(info['file_name'])
