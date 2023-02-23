@@ -116,6 +116,8 @@ if __name__ == '__main__':
             vis = np.copy((1 + norm_output) / 2)
             vis[mask == 0] = 255
 
+            basename = Path(info["file_name"]).stem
+
             for idx in range(3):
                 write_matrix_txt(norm_output[:, :, 0],
                                  os.path.join(args.output, 'pred_normals', basename + f"_{idx + 1}.txt"))
