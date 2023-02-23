@@ -116,18 +116,18 @@ if __name__ == '__main__':
             vis = np.copy((1 + norm_output) / 2)
             vis[mask == 0] = 255
 
-            basename = Path(info["file_name"]).stem
-
-            for idx in range(3):
-                write_matrix_txt(norm_output[:, :, 0],
-                                 os.path.join(args.output, 'pred_normals', basename + f"_{idx + 1}.txt"))
-
             Image.fromarray(resize_image(vis, args.img_size), "RGB").save(
                 os.path.join(args.output, 'pred_normals_png', basename))
             Image.fromarray(resize_image(mask_image, args.img_size), "RGB").save(
                 os.path.join(args.output, 'color_WO_bg', basename))
             Image.fromarray(resize_image(mask, args.img_size), "RGB").save(
                 os.path.join(args.output, 'mask', basename))
+
+            basename = Path(info["file_name"]).stem
+
+            for idx in range(3):
+                write_matrix_txt(norm_output[:, :, 0],
+                                 os.path.join(args.output, 'pred_normals', basename + f"_{idx + 1}.txt"))
 
 
         except Exception as e:
